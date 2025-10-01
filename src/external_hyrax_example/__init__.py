@@ -1,3 +1,3 @@
-from .example_module import greetings, meaning
+from .example_model import ExampleModel
 
-__all__ = ["greetings", "meaning"]
+__all__ = ["ExampleModel"]
