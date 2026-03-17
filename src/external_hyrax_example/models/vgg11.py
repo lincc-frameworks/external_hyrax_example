@@ -19,6 +19,11 @@ class VGG11(nn.Module):
     def __init__(self, config, data_sample=None):
         """Basic initialization with architecture definition"""
         super().__init__()
+        if data_sample is None:
+            raise ValueError(
+                "VGG11 expected 'data_sample' to be provided at construction time "
+                "so that input channel dimensions can be inferred, but received None."
+            )
         image_sample = data_sample[0]
         self.in_channels, width, height = image_sample.shape
         self.config = config
