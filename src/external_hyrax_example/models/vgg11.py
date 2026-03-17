@@ -1,17 +1,20 @@
+from typing import Union, cast
+
 import torch
 import torch.nn as nn
-from typing import Union, cast
 from hyrax.models.model_registry import hyrax_model
-
 
 cfgs = {
     "A": [64, "M", 128, "M", 256, 256, "M", 512, 512, "M", 512, 512, "M"],
 }
 
+
 @hyrax_model
 class VGG11(nn.Module):
-    """Simple example of an externally defined model for testing and demonstration
-    purposes."""
+    """Copy of the PyTorch VGG11 model for testing and demonstration
+    purposes.
+    https://docs.pytorch.org/vision/main/models/generated/torchvision.models.vgg11.html#torchvision.models.vgg11
+    """
 
     def __init__(self, config, data_sample=None):
         """Basic initialization with architecture definition"""
@@ -24,7 +27,7 @@ class VGG11(nn.Module):
         num_classes = self.config["external_hyrax_example"]["VGG11"]["num_classes"]
         batch_norm = self.config["external_hyrax_example"]["VGG11"]["batch_norm"]
 
-        self.features = self.make_layers(cfgs["A"], batch_norm=batch_norm)
+        self.features = self._make_layers(cfgs["A"], batch_norm=batch_norm)
         self.avgpool = nn.AdaptiveAvgPool2d((7, 7))
         self.classifier = nn.Sequential(
             nn.Linear(512 * 7 * 7, 4096),
@@ -36,8 +39,8 @@ class VGG11(nn.Module):
             nn.Linear(4096, num_classes),
         )
 
-
-    def make_layers(self, cfg: list[Union[str, int]], batch_norm: bool = False) -> nn.Sequential:
+    def _make_layers(self, cfg: list[Union[str, int]], batch_norm: bool = False) -> nn.Sequential:
+        """Helper function to create the convolutional layers of the VGG11 architecture"""
         layers: list[nn.Module] = []
         in_channels = self.in_channels
         for v in cfg:
@@ -53,8 +56,8 @@ class VGG11(nn.Module):
                 in_channels = v
         return nn.Sequential(*layers)
 
-
     def forward(self, batch: tuple) -> torch.Tensor:
+        """The innermost logic in the forward pass"""
         x, _ = batch
         x = self.features(x)
         x = self.avgpool(x)
