@@ -148,3 +148,9 @@ _html/
 
 # Project initialization script
 .initialize_new_project.sh
+
+# Default Hyrax results directory
+results/
+docs/notebooks/results/
+docs/pre_executed/results/
+data/
