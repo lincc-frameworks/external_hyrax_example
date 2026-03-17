@@ -1,3 +1,3 @@
-from .example_model import ExampleModel
+from .models.vgg11 import VGG11
 
-__all__ = ["ExampleModel"]
+__all__ = ["VGG11"]

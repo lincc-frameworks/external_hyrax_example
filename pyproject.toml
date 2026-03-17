@@ -17,6 +17,8 @@ classifiers = [
 dynamic = ["version"]
 requires-python = ">=3.11"
 dependencies = [
+    "hyrax", # The main dependency of this project
+    "torch", # Used for the example model in this project
 ]
 
 [project.urls]
