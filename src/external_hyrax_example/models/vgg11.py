@@ -102,5 +102,8 @@ class VGG11(nn.Module):
     def prepare_data(data_dict):
         """Method that converts the data in dictionary into the form the model expects"""
         image = data_dict["data"]["image"]
-        label = data_dict["data"]["label"]
+
+        label = None
+        if "label" in data_dict["data"]:
+            label = data_dict["data"]["label"]
         return (image, label)
