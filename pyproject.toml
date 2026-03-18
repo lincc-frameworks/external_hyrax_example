@@ -35,6 +35,7 @@ dev = [
     "numpy", # Required by example notebooks
     "matplotlib", # Required by example notebooks
     "scikit-learn", # Required by example notebooks (imported as sklearn)
+    "h5py", # Required by example notebooks
 ]
 
 [build-system]

@@ -99,11 +99,18 @@ class VGG11(nn.Module):
         return {"loss": loss.item()}
 
     @staticmethod
-    def prepare_data(data_dict):
+    def prepare_inputs(data_dict):
         """Method that converts the data in dictionary into the form the model expects"""
-        image = data_dict["data"]["image"]
+
+        if "data" not in data_dict:
+            raise RuntimeError("Unable to find `data` key in data_dict")
+
+        data = data_dict["data"]
+
+        image = data["image"]
 
         label = None
         if "label" in data_dict["data"]:
             label = data_dict["data"]["label"]
+
         return (image, label)
