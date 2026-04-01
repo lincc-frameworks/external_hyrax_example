@@ -19,6 +19,10 @@ requires-python = ">=3.11"
 dependencies = [
     "hyrax", # The main dependency of this project
     "torch", # Used for the example model in this project
+    "numpy", # Required by example notebooks
+    "matplotlib", # Required by example notebooks
+    "scikit-learn", # Required by example notebooks (imported as sklearn)
+    "h5py"
 ]
 
 [project.urls]
@@ -32,9 +36,6 @@ dev = [
     "pytest",
     "pytest-cov", # Used to report total code coverage
     "ruff", # Used for static linting of files
-    "numpy", # Required by example notebooks
-    "matplotlib", # Required by example notebooks
-    "scikit-learn", # Required by example notebooks (imported as sklearn)
 ]
 
 [build-system]

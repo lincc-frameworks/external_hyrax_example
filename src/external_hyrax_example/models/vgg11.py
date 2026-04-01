@@ -24,10 +24,12 @@ class VGG11(nn.Module):
                 "VGG11 expected 'data_sample' to be provided at construction time "
                 "so that input channel dimensions can be inferred, but received None."
             )
-        image_sample = data_sample[0]
-        self.in_channels, width, height = image_sample.shape
-        self.config = config
 
+        # This model expects that the first element of the data sample is a batch of images.
+        image_sample = data_sample[0]
+        batch_size, self.in_channels, width, height = image_sample.shape
+
+        self.config = config
         dropout = self.config["external_hyrax_example"]["VGG11"]["dropout"]
         num_classes = self.config["external_hyrax_example"]["VGG11"]["num_classes"]
         batch_norm = self.config["external_hyrax_example"]["VGG11"]["batch_norm"]
@@ -99,11 +101,18 @@ class VGG11(nn.Module):
         return {"loss": loss.item()}
 
     @staticmethod
-    def prepare_data(data_dict):
+    def prepare_inputs(data_dict):
         """Method that converts the data in dictionary into the form the model expects"""
-        image = data_dict["data"]["image"]
+
+        if "data" not in data_dict:
+            raise RuntimeError("Unable to find `data` key in data_dict")
+
+        data = data_dict["data"]
+
+        image = data["image"]
 
         label = None
         if "label" in data_dict["data"]:
             label = data_dict["data"]["label"]
+
         return (image, label)
