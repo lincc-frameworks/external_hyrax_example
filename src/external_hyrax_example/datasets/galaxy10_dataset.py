@@ -19,7 +19,23 @@ class Galaxy10Dataset(HyraxDataset):
     """
 
     def __init__(self, config, data_location):
-        """Basic initialization with architecture definition"""
+        """Initialize the Galaxy10 dataset by loading images and labels from HDF5.
+
+        This initializer:
+        - Resolves and stores the root data location.
+        - Opens the ``Galaxy10.h5`` file using ``h5py`` and reads the ``images`` and
+          ``ans`` datasets into NumPy arrays.
+        - Optionally transposes images from ``(N, H, W, C)`` to ``(N, C, H, W)`` if
+          ``channels_first`` is enabled in
+          ``config["external_hyrax_example"]["galaxy10_dataset"]["channels_first"]``.
+        - Computes the width used to zero-pad object IDs for consistent display.
+        - Calls the base :class:`HyraxDataset` initializer with the provided config.
+
+        Args:
+            config: Configuration dictionary for the Hyrax dataset and experiment.
+            data_location: Path or path-like object pointing to the directory
+                containing the ``Galaxy10.h5`` file.
+        """
         self.data_location = Path(data_location)
 
         # Load the file and get the images and labels
