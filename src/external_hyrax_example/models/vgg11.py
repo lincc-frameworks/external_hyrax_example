@@ -24,10 +24,12 @@ class VGG11(nn.Module):
                 "VGG11 expected 'data_sample' to be provided at construction time "
                 "so that input channel dimensions can be inferred, but received None."
             )
-        image_sample = data_sample[0]
-        self.in_channels, width, height = image_sample.shape
-        self.config = config
 
+        # This model expects that the first element of the data sample is a batch of images.
+        image_sample = data_sample[0]
+        batch_size, self.in_channels, width, height = image_sample.shape
+
+        self.config = config
         dropout = self.config["external_hyrax_example"]["VGG11"]["dropout"]
         num_classes = self.config["external_hyrax_example"]["VGG11"]["num_classes"]
         batch_norm = self.config["external_hyrax_example"]["VGG11"]["batch_norm"]

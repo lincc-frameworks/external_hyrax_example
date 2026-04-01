@@ -3,7 +3,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-from hyrax.data_sets import HyraxDataset
+from hyrax.datasets import HyraxDataset
 
 logger = logging.getLogger(__name__)
 
