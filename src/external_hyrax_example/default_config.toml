@@ -8,10 +8,11 @@ batch_norm = true
 # libpath to specify in runtime config when using the vgg11 model
 # name = "external_hyrax_example.models.vgg11.VGG11"
 
+
 [external_hyrax_example.galaxy10_dataset]
 # When false, the images will be in (N, H, W, C) format.
 # When true, the images will be transposed to (N, C, H, W) format.
 channels_first = false
 
 # libpath to specify in runtime config when using the galaxy10 dataset
-# name = "external_hyrax_example.galaxy10_dataset.Galaxy10Dataset"
+# name = "external_hyrax_example.datasets.galaxy10_dataset.Galaxy10Dataset"
