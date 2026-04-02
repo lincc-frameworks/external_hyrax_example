@@ -53,6 +53,9 @@ class Galaxy10Dataset(HyraxDataset):
         n_id = len(self.images)
         self.id_width = len(str(n_id))
 
+        # HYRAX REQUIREMENT: super().__init__ must be called LAST in __init__,
+        # after all instance attributes are set. The base class inspects the
+        # subclass attributes; calling super() first causes silent failures.
         super().__init__(config)
 
     def __len__(self):

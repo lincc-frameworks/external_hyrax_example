@@ -9,6 +9,9 @@ cfgs = {
 }
 
 
+# HYRAX REQUIREMENT: all model classes must use this decorator.
+# It registers the class with Hyrax's model discovery system.
+# Omitting it means Hyrax cannot find the model at runtime.
 @hyrax_model
 class VGG11(nn.Module):
     """Copy of the PyTorch VGG11 model for testing and demonstration
@@ -100,6 +103,9 @@ class VGG11(nn.Module):
         loss = self.criterion(outputs, labels)
         return {"loss": loss.item()}
 
+    # HYRAX REQUIREMENT: this staticmethod receives the raw data_dict from the
+    # DataProvider and must return the tuple that forward() and train_batch() expect.
+    # It is the ONLY place to reshape/convert data between the dataset and the model.
     @staticmethod
     def prepare_inputs(data_dict):
         """Method that converts the data in dictionary into the form the model expects"""
