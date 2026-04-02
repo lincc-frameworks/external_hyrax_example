@@ -18,10 +18,13 @@ Loading library: [e.g. h5py / astropy.io.fits / numpy / PIL / etc.]
 
 ## Data fields per sample
 Each sample contains:
-- Image field: [e.g. dataset key "images", shape (H, W, C), dtype uint8]
-- Label field: [e.g. dataset key "labels", integer class index 0–9]   (omit if unsupervised)
+- [e.g. image field: dataset key "images", shape (H, W, C), dtype uint8]
+- [e.g. label field: dataset key "labels", integer class index 0–9]   (omit if unsupervised)
+- [e.g. spectrum field: dataset key "flux", shape (N_wavelengths,), dtype float32]
 - Object ID field: [e.g. dataset key "ids", string / or: no IDs, use integer index]
-- Other fields: [list any other metadata fields, or "none"]
+
+List every field the model or training loop uses — the agent will create a
+getter method for each one.
 
 Total dataset size: [e.g. ~22,000 samples]
 
@@ -42,6 +45,14 @@ Hardcode everything else.
 
 ## Notebook file
 [Paste the notebook content here, or attach the .ipynb file]
+
+## Verification (optional but recommended)
+After producing the three files, run the contract tests to confirm the
+implementation satisfies the Hyrax interface:
+- Copy tests/external_hyrax_example/hyrax_contract_helpers/ into your test directory
+- Follow the "Verifying your conversion" instructions in AGENTS.md to write
+  concrete test classes for your dataset and model
+- Run pytest and fix any failures before delivering the files
 ```
 
 ---

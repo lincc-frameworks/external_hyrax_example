@@ -42,10 +42,11 @@ from hyrax.datasets import HyraxDataset
 
 class MyDataset(HyraxDataset):
     def __init__(self, config, data_location):
-        # Load ALL instance attributes here first
+        # Load ALL instance attributes here first.
+        # Open the data source and read every field the getters will need.
         self.data_location = Path(data_location)
-        self.images = ...   # load data
-        self.labels = ...   # load data
+        self.spectra = ...   # load field A into memory
+        self.labels  = ...   # load field B into memory
 
         # HYRAX REQUIREMENT: super().__init__ must be called LAST in __init__,
         # after all instance attributes are set. The base class inspects the
@@ -59,22 +60,47 @@ class MyDataset(HyraxDataset):
 
 | Method | Signature | Returns |
 |--------|-----------|---------|
-| `__len__` | `(self) -> int` | Number of samples |
+| `__len__` | `(self) -> int` | Number of samples in the dataset |
 | `get_object_id` | `(self, index: int) -> str` | Unique string ID for this sample |
-| `get_image` | `(self, index: int) -> np.ndarray` | Image array, `float32`, values in `[0, 1]` |
-| `get_label` | `(self, index: int)` | Label (optional, omit if unsupervised) |
 
 **Do not define `__getitem__`.** Hyrax's base class provides `__getitem__`; defining
 your own will break the DataProvider pipeline.
 
-**Do not put data loading logic in `get_image` or `get_label`** (aside from simple
-indexing). Load the full dataset in `__init__` and index into it in the getters.
+### Data field getter methods
 
-### Image format
+**Derive a getter method for every distinct data field the notebook accesses
+per sample.** Look at the notebook for the per-sample access patterns and create
+a corresponding `get_<fieldname>(self, index: int)` method for each one.
 
-Return images from `get_image` as `np.float32` normalized to `[0, 1]`.
-If `channels_first` is configured, return shape `(C, H, W)`; otherwise `(H, W, C)`.
-Check `config["<package_name>"]["<dataset_class_name>"]["channels_first"]`.
+Examples:
+- Notebook reads `images[i]` → implement `get_image(self, index)`
+- Notebook reads `labels[i]` → implement `get_label(self, index)`
+- Notebook reads `redshift[i]` → implement `get_redshift(self, index)`
+- Notebook reads `flux_array[i]` → implement `get_flux(self, index)`
+
+All getter methods must return **numpy-based data** — either a `numpy.ndarray`
+or a numpy scalar (e.g. `np.float32`, `np.int64`).  Do not return Python lists,
+plain Python scalars, or PyTorch tensors from getters.  The `prepare_inputs`
+staticmethod on the model is the designated place to convert numpy data into
+tensors for the model.
+
+**Do not put data loading logic inside getter methods** (aside from simple
+indexing). Load the complete dataset in `__init__` and index into it in the
+getters.
+
+`get_label` (and any other non-image getter) is **optional** — omit it if the
+task is unsupervised or if that field is not needed downstream.
+
+### Data format
+
+Return numeric numpy data from getter methods. For floating-point fields
+(images, spectra, flux arrays, etc.), use `np.float32` and normalize to a
+consistent range (e.g. `[0, 1]`) when meaningful. For integer fields (class
+labels, object counts), returning the natural numpy integer type is fine.
+
+For image data specifically: if `channels_first` is configured, return shape
+`(C, H, W)`; otherwise `(H, W, C)`. Check
+`config["<package_name>"]["<dataset_class_name>"]["channels_first"]`.
 
 ---
 
@@ -193,9 +219,12 @@ Key rules:
 |-------|-------|
 | `super().__init__(config)` at top of `__init__` | Call it **last** |
 | Define `__getitem__` | Let `HyraxDataset` provide it |
-| Put data loading in `get_image` | Load in `__init__`, index in `get_image` |
+| Put data loading logic inside a getter method | Load in `__init__`, index in getters |
+| Return a Python list or `torch.Tensor` from a getter | Return `numpy.ndarray` or numpy scalar |
+| One getter for all fields (`get_data`) | One getter per field (`get_image`, `get_label`, …) |
 | Omit `@hyrax_model` | Always decorate model classes |
 | Collapse `prepare_inputs` into `forward` | Keep them separate |
+| Return tensors from `prepare_inputs` without converting numpy | Convert numpy → tensor in `prepare_inputs` |
 | Manage the training loop manually | Hyrax owns the outer loop |
 | `config["dropout"]` flat access | `config["pkg"]["Class"]["dropout"]` |
 | Import `torch.utils.data.Dataset` as base | Import `HyraxDataset` |
@@ -213,3 +242,92 @@ The canonical example implementation is in:
 For precise interface contracts (types, shapes, signatures), see `HYRAX_CONTRACTS.md`.
 
 For a before/after worked example, see `docs/notebook_to_hyrax_guide.md`.
+
+---
+
+## Verifying your conversion
+
+After writing the three files, run the contract test helpers to confirm that your
+dataset and model satisfy the Hyrax interface.
+
+### Setup (one time)
+
+Copy the helpers into the project's test directory:
+
+```
+tests/<package_name>/
+    hyrax_contract_helpers/   ← copy this directory from external_hyrax_example
+        __init__.py
+        dataset_contracts.py
+        model_contracts.py
+```
+
+Add one line to `tests/<package_name>/conftest.py` (create it if absent):
+
+```python
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent))
+```
+
+### Write a concrete test class for your dataset
+
+```python
+# tests/<package_name>/test_<dataset>_contracts.py
+from hyrax_contract_helpers.dataset_contracts import HyraxDatasetContractTests
+from <package_name>.datasets.<module> import MyDataset
+
+class TestMyDatasetContracts(HyraxDatasetContractTests):
+    # List the getter methods your dataset implements
+    getter_names = ["get_image", "get_label"]   # adjust to your fields
+
+    @pytest.fixture
+    def dataset(self, tmp_path):
+        config = {"<package_name>": {"MyDataset": {...}}}
+        # Mock / patch any file I/O here, then return an instantiated dataset
+        return MyDataset(config, data_location=tmp_path)
+```
+
+### Write a concrete test class for your model
+
+```python
+# tests/<package_name>/test_<model>_contracts.py
+from hyrax_contract_helpers.model_contracts import HyraxModelContractTests
+from <package_name>.models.<module> import MyModel
+
+class TestMyModelContracts(HyraxModelContractTests):
+    has_validate_batch = True   # set based on what your model implements
+    has_test_batch = True
+
+    @pytest.fixture
+    def model_class(self): return MyModel
+
+    @pytest.fixture
+    def data_dict(self):
+        return {
+            "data": {"image": torch.rand(2, C, H, W), "label": torch.randint(0, N, (2,))},
+            "object_id": ["a", "b"],
+        }
+
+    @pytest.fixture
+    def model(self, model_class, data_dict):
+        config = {
+            "<package_name>": {"MyModel": {...}},
+            "optimizer": {"name": "torch.optim.SGD"},
+            "torch.optim.SGD": {"lr": 0.01},
+            "criterion": {"name": "torch.nn.CrossEntropyLoss"},
+            "scheduler": {"name": None},
+        }
+        batch = model_class.prepare_inputs(data_dict)
+        return model_class(config, data_sample=batch)
+```
+
+### Run the tests
+
+```bash
+python -m pytest tests/<package_name>/ -v
+```
+
+Fix any failures before delivering the converted files. See
+`tests/external_hyrax_example/test_galaxy10_contracts.py` and
+`tests/external_hyrax_example/test_vgg11_contracts.py` for complete worked examples.
