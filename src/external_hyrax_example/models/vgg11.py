@@ -46,6 +46,9 @@ class VGG11(nn.Module):
 
         Raises:
             ValueError: If ``data_sample`` is not provided.
+
+        See Also:
+            https://docs.pytorch.org/vision/main/models/generated/torchvision.models.vgg11.html#torchvision.models.vgg11
         """
         super().__init__()
         if data_sample is None:
