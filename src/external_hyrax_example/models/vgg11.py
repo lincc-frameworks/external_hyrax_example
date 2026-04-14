@@ -11,13 +11,45 @@ cfgs = {
 
 @hyrax_model
 class VGG11(nn.Module):
-    """Copy of the PyTorch VGG11 model for testing and demonstration
-    purposes.
-    https://docs.pytorch.org/vision/main/models/generated/torchvision.models.vgg11.html#torchvision.models.vgg11
+    """VGG11 CNN — canonical example of a Hyrax-compatible external model.
+
+    This class demonstrates every requirement for integrating a PyTorch model
+    with the Hyrax framework:
+
+    1. Decorated with ``@hyrax_model`` so Hyrax can discover this class by its
+       fully-qualified dotted path (e.g. ``"external_hyrax_example.models.vgg11.VGG11"``).
+    2. Constructor accepts ``config`` and ``data_sample`` (see ``__init__``).
+    3. Implements the five Hyrax batch methods: ``forward``, ``train_batch``,
+       ``validate_batch``, ``test_batch``, and ``infer_batch``.
+    4. Implements the static ``prepare_inputs`` method to convert the raw
+       data dictionary supplied by Hyrax into the tuple format the model expects.
+    5. Reads all hyperparameters from ``config`` using the hierarchical key
+       ``config["<package>"]["<ClassName>"]["<param>"]``.
+
+    Reference: https://docs.pytorch.org/vision/main/models/generated/torchvision.models.vgg11.html
     """
 
     def __init__(self, config, data_sample=None):
-        """Basic initialization with architecture definition"""
+        """Initialize the VGG11 architecture.
+
+        Args:
+            config: Nested configuration dictionary populated from the package's
+                ``default_config.toml`` and any runtime overrides set via
+                ``hyrax.Hyrax.set_config``.  Model hyperparameters are read from
+                ``config["external_hyrax_example"]["VGG11"]``.
+            data_sample: A single batch tuple ``(images, labels)`` prepared for
+                the model by Hyrax via ``prepare_inputs``. The first element must
+                be a float tensor of shape ``(N, C, H, W)``. The channel count
+                ``C`` is used to build the first convolutional layer so that the
+                model adapts to the dataset without hard-coding input dimensions.
+                Raises ``ValueError`` if ``None``.
+
+        Raises:
+            ValueError: If ``data_sample`` is not provided.
+
+        See Also:
+            https://docs.pytorch.org/vision/main/models/generated/torchvision.models.vgg11.html#torchvision.models.vgg11
+        """
         super().__init__()
         if data_sample is None:
             raise ValueError(
@@ -25,7 +57,8 @@ class VGG11(nn.Module):
                 "so that input channel dimensions can be inferred, but received None."
             )
 
-        # This model expects that the first element of the data sample is a batch of images.
+        # Infer input channels from the sample rather than hard-coding them.
+        # data_sample[0] is a batch of images with shape (N, C, H, W).
         image_sample = data_sample[0]
         batch_size, self.in_channels, width, height = image_sample.shape
 
@@ -64,7 +97,17 @@ class VGG11(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, batch: tuple) -> torch.Tensor:
-        """The innermost logic in the forward pass"""
+        """Run the model's core forward pass.
+
+        Args:
+            batch: Tuple ``(images, labels)`` where ``images`` is a float
+                tensor of shape ``(N, C, H, W)``.  ``labels`` is ignored here
+                but included so that ``batch`` can be passed directly from
+                ``train_batch`` / ``validate_batch`` without unpacking.
+
+        Returns:
+            Class logits of shape ``(N, num_classes)``.
+        """
         x, _ = batch
         x = self.features(x)
         x = self.avgpool(x)
@@ -73,11 +116,36 @@ class VGG11(nn.Module):
         return x
 
     def infer_batch(self, batch):
-        """The innermost logic in the inference loop"""
+        """Innermost logic of the Hyrax inference loop.
+
+        Called once per batch by ``hyrax.Hyrax.infer()``.  No loss is computed.
+
+        Args:
+            batch: Tuple ``(images, labels)`` as produced by ``prepare_inputs``.
+
+        Returns:
+            Class logits tensor of shape ``(N, num_classes)``.
+        """
         return self(batch)
 
     def train_batch(self, batch):
-        """The innermost logic in the training loop"""
+        """Innermost logic of the Hyrax training loop.
+
+        Called once per batch by ``hyrax.Hyrax.train()``.  Hyrax handles the
+        outer epoch loop, gradient context, and device placement.  This method
+        is responsible only for the per-batch forward pass, loss computation,
+        and parameter update.
+
+        ``self.optimizer`` and ``self.criterion`` are injected by Hyrax before
+        training starts.  Hyrax provides configurable built-in PyTorch optimizers
+        and loss functions by default; the model can override them if needed.
+
+        Args:
+            batch: Tuple ``(images, labels)`` as produced by ``prepare_inputs``.
+
+        Returns:
+            Dict of scalar metrics, e.g. ``{"loss": 0.312}``.
+        """
         _, labels = batch
         self.optimizer.zero_grad()
         outputs = self(batch)
@@ -87,14 +155,35 @@ class VGG11(nn.Module):
         return {"loss": loss.item()}
 
     def validate_batch(self, batch):
-        """The innermost logic in the validation loop"""
+        """Innermost logic of the Hyrax validation loop.
+
+        Called once per batch during the validation phase of ``hyrax.Hyrax.train()``.
+        Hyrax runs this inside a ``torch.no_grad()`` context, so no backward pass
+        is needed or expected.
+
+        Args:
+            batch: Tuple ``(images, labels)`` as produced by ``prepare_inputs``.
+
+        Returns:
+            Dict of scalar metrics, e.g. ``{"loss": 0.298}``.
+        """
         _, labels = batch
         outputs = self(batch)
         loss = self.criterion(outputs, labels)
         return {"loss": loss.item()}
 
     def test_batch(self, batch):
-        """The innermost logic in the testing loop"""
+        """Innermost logic of the Hyrax test loop.
+
+        Called once per batch by ``hyrax.Hyrax.test()``.  Like ``validate_batch``,
+        this runs inside a ``torch.no_grad()`` context.
+
+        Args:
+            batch: Tuple ``(images, labels)`` as produced by ``prepare_inputs``.
+
+        Returns:
+            Dict of scalar metrics, e.g. ``{"loss": 0.301}``.
+        """
         _, labels = batch
         outputs = self(batch)
         loss = self.criterion(outputs, labels)
@@ -102,8 +191,32 @@ class VGG11(nn.Module):
 
     @staticmethod
     def prepare_inputs(data_dict):
-        """Method that converts the data in dictionary into the form the model expects"""
+        """Convert a Hyrax data dictionary into the tuple format the model expects.
 
+        Hyrax calls this method before passing data to ``train_batch``,
+        ``validate_batch``, ``test_batch``, and ``infer_batch``.  The returned
+        tuple must match the signature expected by ``forward``.
+
+        The incoming ``data_dict`` has the structure::
+
+            {
+                "data": {
+                    "image": <tensor>,   # always present
+                    "label": <tensor>,   # present during train/val/test, absent during infer
+                    ...                  # any other fields declared in data_request
+                }
+            }
+
+        Args:
+            data_dict: Dictionary produced by the dataset class and Hyrax's
+                data loader.  Must contain a ``"data"`` key.
+
+        Returns:
+            Tuple ``(image, label)`` where ``label`` is ``None`` if not present.
+
+        Raises:
+            RuntimeError: If ``data_dict`` does not contain a ``"data"`` key.
+        """
         if "data" not in data_dict:
             raise RuntimeError("Unable to find `data` key in data_dict")
 
