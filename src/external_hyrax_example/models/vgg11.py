@@ -30,16 +30,16 @@ class VGG11(nn.Module):
     """
 
     def __init__(self, config, data_sample=None):
-        """Initialise the VGG11 architecture.
+        """Initialize the VGG11 architecture.
 
         Args:
             config: Nested configuration dictionary populated from the package's
                 ``default_config.toml`` and any runtime overrides set via
                 ``hyrax.Hyrax.set_config``.  Model hyperparameters are read from
                 ``config["external_hyrax_example"]["VGG11"]``.
-            data_sample: A single batch tuple ``(images, labels)`` produced by
-                the dataset's ``prepare_inputs`` method.  The first element must
-                be a float tensor of shape ``(N, C, H, W)``.  The channel count
+            data_sample: A single batch tuple ``(images, labels)`` prepared for
+                the model by Hyrax via ``prepare_inputs``. The first element must
+                be a float tensor of shape ``(N, C, H, W)``. The channel count
                 ``C`` is used to build the first convolutional layer so that the
                 model adapts to the dataset without hard-coding input dimensions.
                 Raises ``ValueError`` if ``None``.
